@@ -5,6 +5,19 @@ import { getApplications } from "@/api/apiApplication";
 import useFetch from "@/hooks/use-fetch";
 import { BarLoader } from "react-spinners";
 
+/**
+ * CREATED APPLICATIONS COMPONENT
+ * Displays job applications submitted by the current candidate
+ * 
+ * Features:
+ * - List view of application cards
+ * - Application status tracking
+ * - Resume download functionality
+ * - Loading states
+ * - Empty state handling
+ * 
+ * Used in: MyJobs page for candidates
+ */
 const CreatedApplications = () => {
   const { user } = useUser();
 

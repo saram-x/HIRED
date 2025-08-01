@@ -2,7 +2,6 @@ import { getCompanies } from "@/api/apiCompanies";
 import { addNewJob } from "@/api/apiJobs";
 import AddCompanyDrawer from "@/components/add-company-drawer";
 import { Button } from "@/components/ui/button";
-
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -23,7 +22,12 @@ import { Controller, useForm } from "react-hook-form";
 import { Navigate, useNavigate } from "react-router-dom";
 import { BarLoader } from "react-spinners";
 import { z } from "zod";
+import { useToast } from "@/hooks/use-toast";
 
+/**
+ * JOB POSTING FORM VALIDATION SCHEMA
+ * Zod schema for validating job creation form data
+ */
 const schema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   description: z.string().min(1, { message: "Description is required" }),
@@ -32,9 +36,30 @@ const schema = z.object({
   requirements: z.string().min(1, { message: "Requirements are required" }),
 });
 
+/**
+ * POST JOB PAGE COMPONENT
+ * Job creation form for recruiters on the HIRED platform
+ * 
+ * Features:
+ * - Comprehensive job posting form
+ * - Form validation using Zod schema
+ * - Location selection from country-state-city
+ * - Company selection with add new company option
+ * - Markdown editor for job requirements
+ * - Role-based access (recruiters only)
+ * - Auto-redirect after successful creation
+ * 
+ * Form Fields:
+ * - Job title
+ * - Job description (textarea)
+ * - Location (dropdown)
+ * - Company (dropdown + add new option)
+ * - Requirements (markdown editor)
+ */
 const PostJob = () => {
   const { user, isLoaded } = useUser();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const {
     register,
@@ -62,8 +87,26 @@ const PostJob = () => {
   };
 
   useEffect(() => {
-    if (dataCreateJob?.length > 0) navigate("/jobs");
-  }, [loadingCreateJob]);
+    if (dataCreateJob?.length > 0) {
+      toast({
+        title: "🎉 Job posted successfully!",
+        description: `"${dataCreateJob[0].title}" has been posted and is now live on the platform.`,
+        variant: "default",
+      });
+      navigate("/jobs");
+    }
+  }, [dataCreateJob, navigate, toast]);
+
+  // Show error toast if job creation fails
+  useEffect(() => {
+    if (errorCreateJob) {
+      toast({
+        title: "❌ Error posting job",
+        description: errorCreateJob.message || "Failed to post the job. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [errorCreateJob, toast]);
 
   const {
     loading: loadingCompanies,

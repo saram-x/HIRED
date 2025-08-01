@@ -5,6 +5,19 @@ import { BarLoader } from "react-spinners";
 import JobCard from "./job-card";
 import { useEffect } from "react";
 
+/**
+ * CREATED JOBS COMPONENT
+ * Displays jobs posted by the current recruiter
+ * 
+ * Features:
+ * - Grid layout of job cards
+ * - Job management (delete, edit status)
+ * - Loading states
+ * - Empty state handling
+ * - Real-time data updates
+ * 
+ * Used in: MyJobs page for recruiters
+ */
 const CreatedJobs = () => {
   const { user } = useUser();
 

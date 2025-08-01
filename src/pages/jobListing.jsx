@@ -19,19 +19,38 @@ import {
 import { getCompanies } from "@/api/apiCompanies";
 import { getJobs } from "@/api/apiJobs";
 
+/**
+ * JOB LISTING PAGE COMPONENT
+ * Main job search and browsing page for the HIRED platform
+ * 
+ * Features:
+ * - Job search with real-time filtering
+ * - Location-based filtering using country-state-city data
+ * - Company-based filtering
+ * - Responsive grid layout for job cards
+ * - Clear filters functionality
+ * - Loading states for better UX
+ * 
+ * Filters Available:
+ * - Search query (job titles)
+ * - Location (states/cities)
+ * - Company selection
+ */
 const JobListing = () => {
+  // Filter state management
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
   const [company_id, setCompany_id] = useState("");
 
   const { isLoaded } = useUser();
 
+  // Fetch companies for filter dropdown
   const {
-    // loading: loadingCompanies,
     data: companies,
     fn: fnCompanies,
   } = useFetch(getCompanies);
 
+  // Fetch jobs with current filters applied
   const {
     loading: loadingJobs,
     data: jobs,

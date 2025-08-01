@@ -1,6 +1,12 @@
 import supabaseClient, { supabaseUrl } from "@/utils/supabase";
 
-// Fetch Companies
+/**
+ * COMPANY MANAGEMENT API
+ * Handles company-related operations including fetching and creating companies
+ */
+
+// Fetch all companies for dropdowns and listings
+// Used in: PostJob page, JobListing page filters
 export async function getCompanies(token) {
   const supabase = await supabaseClient(token);
   const { data, error } = await supabase.from("companies").select("*");
@@ -13,7 +19,8 @@ export async function getCompanies(token) {
   return data;
 }
 
-// Add Company
+// Add new company with logo upload
+// Used in: AddCompanyDrawer component (in PostJob page)
 export async function addNewCompany(token, _, companyData) {
   const supabase = await supabaseClient(token);
 
