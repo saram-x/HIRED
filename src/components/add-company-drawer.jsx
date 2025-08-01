@@ -17,7 +17,12 @@ import {
   import { addNewCompany } from "@/api/apiCompanies";
   import { BarLoader } from "react-spinners";
   import { useEffect } from "react";
+  import { useToast } from "@/hooks/use-toast";
   
+  /**
+   * COMPANY REGISTRATION FORM VALIDATION SCHEMA
+   * Zod schema for validating new company data
+   */
   const schema = z.object({
     name: z.string().min(1, { message: "Company name is required" }),
     logo: z
@@ -32,7 +37,32 @@ import {
       ),
   });
   
+  /**
+   * ADD COMPANY DRAWER COMPONENT
+   * Modal form for registering new companies on HIRED platform
+   * 
+   * FEATURES:
+   * - Modal drawer interface for company registration
+   * - Form validation using Zod schema
+   * - Company name input with validation
+   * - Logo upload (PNG/JPEG only)
+   * - Real-time validation and error display
+   * - Loading states during submission
+   * - Automatic form reset after successful submission
+   * - Integration with companies API
+   * 
+   * USAGE CONTEXT:
+   * - Used in post-job page when company doesn't exist
+   * - Allows recruiters to add their company to platform
+   * - Required step before posting jobs
+   * - Integrates with Supabase for company data storage
+   * - Refreshes company list after successful addition
+   * 
+   * @param {Function} fetchCompanies - Function to refresh companies list after addition
+   */
   const AddCompanyDrawer = ({ fetchCompanies }) => {
+    const { toast } = useToast();
+    
     const {
       register,
       handleSubmit,
@@ -57,9 +87,25 @@ import {
   
     useEffect(() => {
       if (dataAddCompany?.length > 0) {
+        toast({
+          title: "🏢 Company added successfully!",
+          description: `${dataAddCompany[0].name} has been added to the platform.`,
+          variant: "default",
+        });
         fetchCompanies();
       }
-    }, [loadingAddCompany]);
+    }, [dataAddCompany, fetchCompanies, toast]);
+
+    // Show error toast if company creation fails
+    useEffect(() => {
+      if (errorAddCompany) {
+        toast({
+          title: "❌ Error adding company",
+          description: errorAddCompany.message || "Failed to add the company. Please try again.",
+          variant: "destructive",
+        });
+      }
+    }, [errorAddCompany, toast]);
   
     return (
       <Drawer>

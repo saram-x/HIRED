@@ -18,10 +18,28 @@ import ApplicationCard from "@/components/application-card";
 import useFetch from "@/hooks/use-fetch";
 import { getSingleJob, updateHiringStatus } from "@/api/apiJobs";
 
+/**
+ * JOB DETAIL PAGE COMPONENT
+ * Individual job posting page with full details on the HIRED platform
+ * 
+ * Features:
+ * - Complete job information display
+ * - Company logo and branding
+ * - Job status indicator (Open/Closed)
+ * - Apply functionality for candidates
+ * - Hiring status toggle for recruiters
+ * - Application management for recruiters
+ * - Markdown support for job requirements
+ * 
+ * Role-based Functionality:
+ * - Candidates: Can view and apply to jobs
+ * - Recruiters: Can manage hiring status and view applications
+ */
 const JobPage = () => {
-  const { id } = useParams();
+  const { id } = useParams(); // Get job ID from URL
   const { isLoaded, user } = useUser();
 
+  // Fetch single job with all details
   const {
     loading: loadingJob,
     data: job,

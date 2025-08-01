@@ -5,7 +5,13 @@ import "./index.css";
 import { ClerkProvider } from "@clerk/clerk-react";
 import { shadesOfPurple } from "@clerk/themes";
 
-// Import publishable key
+/**
+ * APPLICATION ENTRY POINT
+ * Sets up Clerk authentication with custom theme
+ * Wraps the entire app with authentication context
+ */
+
+// Import Clerk publishable key from environment
 const PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
 
 if (!PUBLISHABLE_KEY) {
@@ -16,10 +22,10 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <ClerkProvider
       appearance={{
-        baseTheme: shadesOfPurple,
+        baseTheme: shadesOfPurple, // Custom purple theme for auth UI
       }}
       publishableKey={PUBLISHABLE_KEY}
-      afterSignOutUrl="/"
+      afterSignOutUrl="/" // Redirect to landing page after sign out
     >
       <App />
     </ClerkProvider>

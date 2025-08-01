@@ -1,6 +1,12 @@
 import supabaseClient, { supabaseUrl } from "@/utils/supabase";
 
-// - Apply to job ( candidate )
+/**
+ * APPLICATION MANAGEMENT API
+ * Handles job application operations for both candidates and recruiters
+ */
+
+// Submit job application (candidate applies to job)
+// Used in: ApplyJobDrawer component
 export async function applyToJob(token, _, jobData) {
   const supabase = await supabaseClient(token);
 
@@ -33,7 +39,8 @@ export async function applyToJob(token, _, jobData) {
   return data;
 }
 
-// - Edit Application Status ( recruiter )
+// Update application status (recruiter manages applications)
+// Used in: ApplicationCard component status dropdown
 export async function updateApplicationStatus(token, { job_id }, status) {
   const supabase = await supabaseClient(token);
   const { data, error } = await supabase
@@ -50,6 +57,8 @@ export async function updateApplicationStatus(token, { job_id }, status) {
   return data;
 }
 
+// Get all applications for a user (candidate views their applications)
+// Used in: CreatedApplications component (MyJobs page for candidates)
 export async function getApplications(token, { user_id }) {
   const supabase = await supabaseClient(token);
   const { data, error } = await supabase

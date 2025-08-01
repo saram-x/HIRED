@@ -5,15 +5,33 @@ import { useUser } from "@clerk/clerk-react";
 import { useEffect } from "react";
 import { BarLoader } from "react-spinners";
 
+/**
+ * SAVED JOBS PAGE COMPONENT
+ * Displays user's saved/bookmarked jobs on the HIRED platform
+ * 
+ * Features:
+ * - Grid layout of saved job cards
+ * - Real-time data fetching with loading states
+ * - Save/unsave functionality through JobCard
+ * - Empty state handling
+ * - Responsive design for all screen sizes
+ * 
+ * User Flow:
+ * - Users can save jobs from listings or job details
+ * - All saved jobs are displayed here
+ * - Users can unsave jobs directly from this page
+ */
 const SavedJobs = () => {
   const { isLoaded } = useUser();
 
+  // Fetch saved jobs for the current user
   const {
     loading: loadingSavedJobs,
     data: savedJobs,
     fn: fnSavedJobs,
   } = useFetch(getSavedJobs);
 
+  // Load saved jobs when component mounts
   useEffect(() => {
     if (isLoaded) {
       fnSavedJobs();
@@ -21,6 +39,7 @@ const SavedJobs = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
+  // Show loading spinner while data is being fetched
   if (!isLoaded || loadingSavedJobs) {
     return <BarLoader className="mb-4" width={"100%"} color="#36d7b7" />;
   }
@@ -31,6 +50,7 @@ const SavedJobs = () => {
         Saved Jobs
       </h1>
 
+      {/* Saved jobs grid or empty state */}
       {loadingSavedJobs === false && (
         <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {savedJobs?.length ? (

@@ -10,18 +10,39 @@ import {
 import { Button } from "./ui/button";
 import { BriefcaseBusiness, Heart, PenBox } from "lucide-react";
 
+/**
+ * HEADER NAVIGATION COMPONENT
+ * Main navigation bar for the HIRED platform
+ * 
+ * Features:
+ * - Responsive logo and branding
+ * - Clerk authentication integration
+ * - Role-based navigation items
+ * - Modal sign-in functionality
+ * - User profile dropdown with quick links
+ * - Post job button for recruiters
+ * 
+ * Authentication States:
+ * - Signed out: Shows login button
+ * - Signed in: Shows user menu and role-specific options
+ */
 const Header = () => {
   const [showSignIn, setShowSignIn] = useState(false);
-
   const [search, setSearch] = useSearchParams();
   const { user } = useUser();
 
+  // Dynamic logo link based on user role
+  const role = user?.unsafeMetadata?.role;
+  const logoLink = role === "admin" ? "/admin" : "/";
+
+  // Show sign-in modal when URL param is present
   useEffect(() => {
     if (search.get("sign-in")) {
       setShowSignIn(true);
     }
   }, [search]);
 
+  // Handle click outside modal to close
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
       setShowSignIn(false);
@@ -32,8 +53,8 @@ const Header = () => {
   return (
     <>
       <nav className="py-4 flex justify-between items-center">
-        <Link to="/">
-          <img src="/logo.png" className="h-20" alt="Hirrd Logo" />
+        <Link to={logoLink}>
+          <img src="/logo.png" className="h-20" alt="HIRED Logo" />
         </Link>
 
         <div className="flex gap-8">
