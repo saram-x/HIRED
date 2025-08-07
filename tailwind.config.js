@@ -1,3 +1,4 @@
+// Tailwind CSS configuration with shadcn/ui theme integration
 /** @type {import('tailwindcss').Config} */
 module.exports = {
 	darkMode: ["class"],
@@ -17,6 +18,7 @@ module.exports = {
     		}
     	},
     	extend: {
+    		// Color system using CSS custom properties
     		colors: {
     			border: 'hsl(var(--border))',
     			input: 'hsl(var(--input))',
@@ -62,11 +64,13 @@ module.exports = {
     				ring: 'hsl(var(--sidebar-ring))'
     			}
     		},
+    		// Border radius system
     		borderRadius: {
     			lg: 'var(--radius)',
     			md: 'calc(var(--radius) - 2px)',
     			sm: 'calc(var(--radius) - 4px)'
     		},
+    		// Animation keyframes for components
     		keyframes: {
     			'accordion-down': {
     				from: {

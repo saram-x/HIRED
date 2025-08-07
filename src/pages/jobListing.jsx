@@ -19,38 +19,22 @@ import {
 import { getCompanies } from "@/api/apiCompanies";
 import { getJobs } from "@/api/apiJobs";
 
-/**
- * JOB LISTING PAGE COMPONENT
- * Main job search and browsing page for the HIRED platform
- * 
- * Features:
- * - Job search with real-time filtering
- * - Location-based filtering using country-state-city data
- * - Company-based filtering
- * - Responsive grid layout for job cards
- * - Clear filters functionality
- * - Loading states for better UX
- * 
- * Filters Available:
- * - Search query (job titles)
- * - Location (states/cities)
- * - Company selection
- */
+// Main job listing page with search and filter functionality
 const JobListing = () => {
-  // Filter state management
+  // State for job filters
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
   const [company_id, setCompany_id] = useState("");
 
   const { isLoaded } = useUser();
 
-  // Fetch companies for filter dropdown
+  // Fetch companies for company filter dropdown
   const {
     data: companies,
     fn: fnCompanies,
   } = useFetch(getCompanies);
 
-  // Fetch jobs with current filters applied
+  // Fetch jobs with applied filters
   const {
     loading: loadingJobs,
     data: jobs,
@@ -61,6 +45,7 @@ const JobListing = () => {
     searchQuery,
   });
 
+  // Load companies on component mount
   useEffect(() => {
     if (isLoaded) {
       fnCompanies();
@@ -68,11 +53,13 @@ const JobListing = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
+  // Refetch jobs when filters change
   useEffect(() => {
     if (isLoaded) fnJobs();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, location, company_id, searchQuery]);
 
+  // Handle search form submission
   const handleSearch = (e) => {
     e.preventDefault();
     let formData = new FormData(e.target);
@@ -81,21 +68,25 @@ const JobListing = () => {
     if (query) setSearchQuery(query);
   };
 
+  // Reset all filters to default state
   const clearFilters = () => {
     setSearchQuery("");
     setCompany_id("");
     setLocation("");
   };
 
+  // Show loading spinner until user data is loaded
   if (!isLoaded) {
     return <BarLoader className="mb-4" width={"100%"} color="#36d7b7" />;
   }
 
   return (
     <div className="">
+      {/* Page title */}
       <h1 className="gradient-title font-extrabold text-6xl sm:text-7xl text-center pb-8">
         Latest Jobs
       </h1>
+      {/* Job search form */}
       <form
         onSubmit={handleSearch}
         className="h-14 flex flex-row w-full gap-2 items-center mb-3"
@@ -111,7 +102,9 @@ const JobListing = () => {
         </Button>
       </form>
 
+      {/* Filter controls */}
       <div className="flex flex-col sm:flex-row gap-2">
+        {/* Location filter - Pakistan states */}
         <Select value={location} onValueChange={(value) => setLocation(value)}>
           <SelectTrigger>
             <SelectValue placeholder="Filter by Location" />
@@ -129,6 +122,7 @@ const JobListing = () => {
           </SelectContent>
         </Select>
 
+        {/* Company filter */}
         <Select
           value={company_id}
           onValueChange={(value) => setCompany_id(value)}
@@ -148,6 +142,7 @@ const JobListing = () => {
             </SelectGroup>
           </SelectContent>
         </Select>
+        {/* Clear all filters button */}
         <Button
           className="sm:w-1/2"
           variant="destructive"
@@ -157,10 +152,12 @@ const JobListing = () => {
         </Button>
       </div>
 
+      {/* Loading spinner for job fetching */}
       {loadingJobs && (
         <BarLoader className="mt-4" width={"100%"} color="#36d7b7" />
       )}
 
+      {/* Job results grid */}
       {loadingJobs === false && (
         <div className="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {jobs?.length ? (

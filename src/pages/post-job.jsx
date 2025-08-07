@@ -24,10 +24,7 @@ import { BarLoader } from "react-spinners";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 
-/**
- * JOB POSTING FORM VALIDATION SCHEMA
- * Zod schema for validating job creation form data
- */
+// Zod validation schema for job posting form
 const schema = z.object({
   title: z.string().min(1, { message: "Title is required" }),
   description: z.string().min(1, { message: "Description is required" }),
@@ -36,31 +33,13 @@ const schema = z.object({
   requirements: z.string().min(1, { message: "Requirements are required" }),
 });
 
-/**
- * POST JOB PAGE COMPONENT
- * Job creation form for recruiters on the HIRED platform
- * 
- * Features:
- * - Comprehensive job posting form
- * - Form validation using Zod schema
- * - Location selection from country-state-city
- * - Company selection with add new company option
- * - Markdown editor for job requirements
- * - Role-based access (recruiters only)
- * - Auto-redirect after successful creation
- * 
- * Form Fields:
- * - Job title
- * - Job description (textarea)
- * - Location (dropdown)
- * - Company (dropdown + add new option)
- * - Requirements (markdown editor)
- */
+// Job posting form for recruiters with comprehensive validation
 const PostJob = () => {
   const { user, isLoaded } = useUser();
   const navigate = useNavigate();
   const { toast } = useToast();
 
+  // Form setup with validation
   const {
     register,
     handleSubmit,
@@ -71,6 +50,7 @@ const PostJob = () => {
     resolver: zodResolver(schema),
   });
 
+  // Job creation API call
   const {
     loading: loadingCreateJob,
     error: errorCreateJob,
@@ -78,6 +58,7 @@ const PostJob = () => {
     fn: fnCreateJob,
   } = useFetch(addNewJob);
 
+  // Handle form submission
   const onSubmit = (data) => {
     fnCreateJob({
       ...data,
@@ -86,6 +67,7 @@ const PostJob = () => {
     });
   };
 
+  // Navigate to jobs page after successful creation
   useEffect(() => {
     if (dataCreateJob?.length > 0) {
       toast({
@@ -97,7 +79,7 @@ const PostJob = () => {
     }
   }, [dataCreateJob, navigate, toast]);
 
-  // Show error toast if job creation fails
+  // Show error notification on job creation failure
   useEffect(() => {
     if (errorCreateJob) {
       toast({
@@ -108,12 +90,14 @@ const PostJob = () => {
     }
   }, [errorCreateJob, toast]);
 
+  // Fetch companies for dropdown selection
   const {
     loading: loadingCompanies,
     data: companies,
     fn: fnCompanies,
   } = useFetch(getCompanies);
 
+  // Load companies when component mounts
   useEffect(() => {
     if (isLoaded) {
       fnCompanies();
@@ -121,32 +105,40 @@ const PostJob = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded]);
 
+  // Show loading until data is ready
   if (!isLoaded || loadingCompanies) {
     return <BarLoader className="mb-4" width={"100%"} color="#36d7b7" />;
   }
 
+  // Redirect if user is not a recruiter
   if (user?.unsafeMetadata?.role !== "recruiter") {
     return <Navigate to="/jobs" />;
   }
 
   return (
     <div>
+      {/* Page title */}
       <h1 className="gradient-title font-extrabold text-5xl sm:text-7xl text-center pb-8">
         Post a Job
       </h1>
+      {/* Job posting form */}
       <form
         onSubmit={handleSubmit(onSubmit)}
         className="flex flex-col gap-4 p-4 pb-0"
       >
+        {/* Job title input */}
         <Input placeholder="Job Title" {...register("title")} />
         {errors.title && <p className="text-red-500">{errors.title.message}</p>}
 
+        {/* Job description textarea */}
         <Textarea placeholder="Job Description" {...register("description")} />
         {errors.description && (
           <p className="text-red-500">{errors.description.message}</p>
         )}
 
+        {/* Location and company selection row */}
         <div className="flex gap-4 items-center">
+          {/* Location dropdown - Pakistan states */}
           <Controller
             name="location"
             control={control}
@@ -167,6 +159,7 @@ const PostJob = () => {
               </Select>
             )}
           />
+          {/* Company selection dropdown */}
           <Controller
             name="company_id"
             control={control}
@@ -192,8 +185,10 @@ const PostJob = () => {
               </Select>
             )}
           />
+          {/* Add new company drawer */}
           <AddCompanyDrawer fetchCompanies={fnCompanies} />
         </div>
+        {/* Error messages for location and company */}
         {errors.location && (
           <p className="text-red-500">{errors.location.message}</p>
         )}
@@ -201,6 +196,7 @@ const PostJob = () => {
           <p className="text-red-500">{errors.company_id.message}</p>
         )}
 
+        {/* Job requirements markdown editor */}
         <Controller
           name="requirements"
           control={control}
@@ -211,13 +207,16 @@ const PostJob = () => {
         {errors.requirements && (
           <p className="text-red-500">{errors.requirements.message}</p>
         )}
+        {/* Error messages */}
         {errors.errorCreateJob && (
           <p className="text-red-500">{errors?.errorCreateJob?.message}</p>
         )}
         {errorCreateJob?.message && (
           <p className="text-red-500">{errorCreateJob?.message}</p>
         )}
+        {/* Loading state */}
         {loadingCreateJob && <BarLoader width={"100%"} color="#36d7b7" />}
+        {/* Submit button */}
         <Button type="submit" variant="blue" size="lg" className="mt-2">
           Submit
         </Button>

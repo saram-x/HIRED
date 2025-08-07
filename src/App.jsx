@@ -1,12 +1,12 @@
 import { RouterProvider, createBrowserRouter } from "react-router-dom";
 
-// Layout and Protection
+// Import layout and route protection components
 import AppLayout from "./layouts/app-layout";
 import ProtectedRoute from "./components/protected-route";
 import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "./components/ui/toaster";
 
-// Page Components
+// Import all page components
 import AdminPageSimple from "./pages/AdminPageSimple";
 import LandingPage from "./pages/landing";
 import Onboarding from "./pages/onboarding";
@@ -18,12 +18,7 @@ import JobPage from "./pages/job";
 
 import "./App.css";
 
-/**
- * MAIN APPLICATION ROUTER CONFIGURATION
- * Defines all routes and their protection levels
- * All routes except landing page require authentication
- */
-
+// Define all application routes with protection levels
 const router = createBrowserRouter([
   {
     element: <AppLayout />,
@@ -96,9 +91,9 @@ const router = createBrowserRouter([
   },
 ]);
 
+// Main App component with theme provider and routing
 function App() {
   return (
-    // Dark theme by default with localStorage persistence
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <RouterProvider router={router} />
       <Toaster />

@@ -4,30 +4,17 @@ import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { BarLoader } from "react-spinners";
 
-/**
- * ONBOARDING PAGE COMPONENT
- * Role selection page for new users on the HIRED platform
- * 
- * Features:
- * - Role selection (Candidate or Recruiter)
- * - Updates user metadata in Clerk
- * - Automatic navigation based on selected role
- * - Handles existing users with roles (auto-redirect)
- * 
- * Flow:
- * - Candidate → redirected to /jobs (job listings)
- * - Recruiter → redirected to /post-job (job creation)
- */
+// Role selection page for new users
 const Onboarding = () => {
   const { user, isLoaded } = useUser();
   const navigate = useNavigate();
 
-  // Navigate user based on their role
+  // Navigate user to appropriate page based on role
   const navigateUser = (currRole) => {
     navigate(currRole === "recruiter" ? "/post-job" : "/jobs");
   };
 
-  // Handle role selection and update user metadata
+  // Update user role in Clerk metadata and navigate
   const handleRoleSelection = async (role) => {
     await user
       .update({ unsafeMetadata: { role } })
@@ -40,13 +27,14 @@ const Onboarding = () => {
       });
   };
 
-  // Auto-redirect if user already has a role
+  // Auto-redirect users who already have a role
   useEffect(() => {
     if (user?.unsafeMetadata?.role) {
       navigateUser(user.unsafeMetadata.role);
     }
   }, [user]);
 
+  // Show loading spinner while user data loads
   if (!isLoaded) {
     return <BarLoader className="mb-4" width={"100%"} color="#36d7b7" />;
   }

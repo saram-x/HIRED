@@ -1,26 +1,24 @@
 import supabaseClient, { supabaseUrl } from "@/utils/supabase";
 
-/**
- * APPLICATION MANAGEMENT API
- * Handles job application operations for both candidates and recruiters
- */
-
-// Submit job application (candidate applies to job)
-// Used in: ApplyJobDrawer component
+// Submit job application with resume upload
 export async function applyToJob(token, _, jobData) {
   const supabase = await supabaseClient(token);
 
+  // Generate unique filename for resume
   const random = Math.floor(Math.random() * 90000);
   const fileName = `resume-${random}-${jobData.candidate_id}`;
 
+  // Upload resume to storage
   const { error: storageError } = await supabase.storage
     .from("resumes")
     .upload(fileName, jobData.resume);
 
   if (storageError) throw new Error("Error uploading Resume");
 
+  // Get public URL for uploaded resume
   const resume = `${supabaseUrl}/storage/v1/object/public/resumes/${fileName}`;
 
+  // Insert application record with resume URL
   const { data, error } = await supabase
     .from("applications")
     .insert([
@@ -39,8 +37,7 @@ export async function applyToJob(token, _, jobData) {
   return data;
 }
 
-// Update application status (recruiter manages applications)
-// Used in: ApplicationCard component status dropdown
+// Update application status for recruiter management
 export async function updateApplicationStatus(token, { job_id }, status) {
   const supabase = await supabaseClient(token);
   const { data, error } = await supabase
@@ -57,8 +54,7 @@ export async function updateApplicationStatus(token, { job_id }, status) {
   return data;
 }
 
-// Get all applications for a user (candidate views their applications)
-// Used in: CreatedApplications component (MyJobs page for candidates)
+// Get all applications for a specific user
 export async function getApplications(token, { user_id }) {
   const supabase = await supabaseClient(token);
   const { data, error } = await supabase

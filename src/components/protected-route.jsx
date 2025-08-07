@@ -2,51 +2,42 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 
-/**
- * PROTECTED ROUTE COMPONENT
- * Handles authentication and role-based access control
- * Redirects unauthenticated users to sign-in
- * Redirects users without roles to onboarding
- * 
- * @param {Object} props - Component props
- * @param {React.ReactNode} props.children - Child components to render
- * @param {string} props.requiredRole - Required role to access this route (optional)
- */
+// Authentication wrapper with role-based access control and redirects
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { isSignedIn, isLoaded, user } = useUser();
   const { pathname } = useLocation();
 
-  // Loading state
+  // Show nothing while loading user data
   if (!isLoaded) return null;
 
-  // If not signed in, redirect to sign-in
+  // Redirect to sign-in if not authenticated
   if (!isSignedIn) {
     return <Navigate to="/?sign-in=true" />;
   }
 
   const role = user?.unsafeMetadata?.role;
 
-  // If a specific role is required and user doesn't have it, redirect to home
+  // Check if user has the required role for this route
   if (requiredRole && role !== requiredRole) {
     return <Navigate to="/" replace />;
   }
 
-  // Redirect admin users to /admin if they try to access other pages
+  // Auto-redirect admins to admin panel
   if (role === "admin" && pathname !== "/admin") {
     return <Navigate to="/admin" />;
   }
 
-  // If not admin and trying to access /admin, redirect to home
+  // Prevent non-admins from accessing admin routes
   if (role !== "admin" && pathname === "/admin") {
     return <Navigate to="/" replace />;
   }
 
-  // If no role and not on onboarding, send to onboarding
+  // Redirect users without roles to onboarding flow
   if (!role && pathname !== "/onboarding") {
     return <Navigate to="/onboarding" />;
   }
 
-  // Everything is fine, allow access
+  // Render protected content if all checks pass
   return children;
 };
 

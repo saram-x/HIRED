@@ -10,39 +10,24 @@ import {
 import { Button } from "./ui/button";
 import { BriefcaseBusiness, Heart, PenBox } from "lucide-react";
 
-/**
- * HEADER NAVIGATION COMPONENT
- * Main navigation bar for the HIRED platform
- * 
- * Features:
- * - Responsive logo and branding
- * - Clerk authentication integration
- * - Role-based navigation items
- * - Modal sign-in functionality
- * - User profile dropdown with quick links
- * - Post job button for recruiters
- * 
- * Authentication States:
- * - Signed out: Shows login button
- * - Signed in: Shows user menu and role-specific options
- */
+// Main navigation header with authentication and role-based features
 const Header = () => {
   const [showSignIn, setShowSignIn] = useState(false);
   const [search, setSearch] = useSearchParams();
   const { user } = useUser();
 
-  // Dynamic logo link based on user role
+  // Set logo link based on user role (admin goes to admin panel)
   const role = user?.unsafeMetadata?.role;
   const logoLink = role === "admin" ? "/admin" : "/";
 
-  // Show sign-in modal when URL param is present
+  // Show sign-in modal when URL parameter is present
   useEffect(() => {
     if (search.get("sign-in")) {
       setShowSignIn(true);
     }
   }, [search]);
 
-  // Handle click outside modal to close
+  // Close modal when clicking outside of it
   const handleOverlayClick = (e) => {
     if (e.target === e.currentTarget) {
       setShowSignIn(false);
