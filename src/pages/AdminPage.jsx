@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useUser, useSession } from "@clerk/clerk-react";
-import { deleteJob } from "@/api/apiJobs";
 import {
   AlertDialog,
   AlertDialogTrigger,
@@ -34,9 +33,9 @@ import {
   SidebarHeader,
 } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
-import { Users, Briefcase, Shield } from "lucide-react";
+import { Users, Briefcase, Shield, AlertTriangle } from "lucide-react";
 
-const AdminPageSimple = () => {
+const AdminPage = () => {
   // State management for users, jobs, and UI controls
   const [users, setUsers] = useState([]);          // All users from Clerk API
   const [searchEmail, setSearchEmail] = useState(""); // Search filter for users
@@ -46,26 +45,92 @@ const AdminPageSimple = () => {
   const [searchJobs, setSearchJobs] = useState(""); // Search filter for jobs
   const [jobsLoading, setJobsLoading] = useState(false); // Loading state for job fetch
   
+  const [suspiciousJobs, setSuspiciousJobs] = useState([]); // Suspicious/flagged jobs
+  const [cleanedJobs, setCleanedJobs] = useState(new Set()); // Track cleaned jobs in current session
+  const [searchSuspicious, setSearchSuspicious] = useState(""); // Search filter for suspicious jobs
+  const [suspiciousLoading, setSuspiciousLoading] = useState(false); // Loading state for suspicious jobs
+  
   const [error, setError] = useState(null);        // Global error state
-  const [activeTab, setActiveTab] = useState("users"); // Current sidebar tab ("users" or "jobs")
+  const [activeTab, setActiveTab] = useState("users"); // Current sidebar tab ("users", "jobs", or "suspicious")
   
   const { user, isLoaded } = useUser();            // Current admin user from Clerk
   const { session } = useSession();               // Current session from Clerk
   const { toast } = useToast();                   // Toast notification system
 
+  // Fetch suspicious jobs for admin review
+  const fnSuspiciousJobs = async () => {
+    try {
+      setSuspiciousLoading(true);
+      
+      const response = await fetch("http://localhost:3001/api/get-suspicious-jobs");
+      if (!response.ok) {
+        throw new Error(`Failed to fetch suspicious jobs: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Filter out cleaned jobs from current session
+      const filteredData = data.filter(job => !cleanedJobs.has(job.id));
+      setSuspiciousJobs(filteredData);
+    } catch (err) {
+      console.error("❌ Error fetching suspicious jobs:", err);
+      setError("Error fetching suspicious jobs");
+    } finally {
+      setSuspiciousLoading(false);
+    }
+  };
+
+  // Run auto-detection for suspicious jobs
+  const handleAutoDetect = async () => {
+    try {
+      const response = await fetch("http://localhost:3001/api/auto-detect-suspicious", {
+        method: "POST"
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        if (result.migrationRequired) {
+          toast({
+            title: "🔧 Database Migration Required",
+            description: "Please run the database migration first. Check SUSPICIOUS_JOBS_MIGRATION.md for instructions.",
+            variant: "destructive",
+          });
+          return;
+        }
+        throw new Error(result.error || "Auto-detection failed");
+      }
+      
+      toast({
+        title: "🔍 Auto-detection complete!",
+        description: `${result.flaggedCount} jobs were automatically flagged as suspicious.`,
+        variant: "default",
+      });
+      
+      // Refresh jobs lists
+      fnJobs();
+      fnSuspiciousJobs();
+    } catch (err) {
+      console.error("Error in auto-detection:", err);
+      toast({
+        title: "❌ Auto-detection failed",
+        description: err.message || "Failed to run auto-detection. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Fetch all jobs with recruiter info via server-side API
   const fnJobs = async () => {
     try {
       setJobsLoading(true);
-      console.log("📡 Fetching jobs for admin...");
       
-      const response = await fetch("http://localhost:3001/api/get-jobs");
+      const response = await fetch("http://localhost:3001/api/jobs");
       if (!response.ok) {
         throw new Error(`Failed to fetch jobs: ${response.status}`);
       }
       
       const data = await response.json();
-      console.log("✅ Jobs fetched successfully:", data);
       setJobs(data);
     } catch (err) {
       console.error("❌ Error fetching jobs:", err);
@@ -78,7 +143,7 @@ const AdminPageSimple = () => {
   // Fetch all platform users from Clerk API via backend
   const fetchUsers = async () => {
     try {
-      const res = await fetch("http://localhost:3001/api/get-clerk-users");
+      const res = await fetch("http://localhost:3001/api/users");
       const data = await res.json();
       setUsers(data);
     } catch (err) {
@@ -92,10 +157,8 @@ const AdminPageSimple = () => {
   // Delete job permanently via server-side API with service role
   const handleDeleteJob = async (jobId) => {
     try {
-      console.log("🗑️ Admin deleting job with ID:", jobId);
-      
       // Verify job exists before deletion
-      const checkResponse = await fetch(`http://localhost:3001/api/get-jobs`);
+      const checkResponse = await fetch(`http://localhost:3001/api/jobs`);
       const serverJobs = await checkResponse.json();
       
       const jobExists = serverJobs.find(job => job.id == jobId);
@@ -110,10 +173,8 @@ const AdminPageSimple = () => {
         return;
       }
       
-      console.log("✅ Job found on server, proceeding with deletion...");
-      
       // Delete via server-side API (bypasses RLS)
-      const response = await fetch(`http://localhost:3001/api/delete-job/${jobId}`, {
+      const response = await fetch(`http://localhost:3001/api/jobs/${jobId}`, {
         method: "DELETE",
       });
       
@@ -121,23 +182,48 @@ const AdminPageSimple = () => {
         const errorData = await response.json();
         throw new Error(errorData.error || `Server deletion failed: ${response.status}`);
       }
-      
+
       const result = await response.json();
-      console.log("✅ Server-side deletion successful:", result);
       
+      // Refresh both regular jobs and suspicious jobs
       fnJobs();
+      fnSuspiciousJobs();
       
       toast({
         title: "✅ Job deleted successfully!",
         description: `"${jobExists.title}" has been removed from the platform. (${result.rowsAffected} row affected)`,
         variant: "default",
-      });
-      
-    } catch (err) {
+      });    } catch (err) {
       console.error("❌ Error deleting job:", err);
       toast({
         title: "❌ Error deleting job",
         description: err.message || "Failed to delete job. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Clean/unflag job from suspicious list
+  const handleCleanJob = async (jobId) => {
+    try {
+      // Add job to cleaned list for current session
+      const updatedCleanedJobs = new Set([...cleanedJobs, jobId]);
+      setCleanedJobs(updatedCleanedJobs);
+      
+      toast({
+        title: "✅ Job cleaned successfully!",
+        description: "The job has been cleared from suspicious jobs list for this session.",
+        variant: "default",
+      });
+      
+      // Immediately update the suspicious jobs list by filtering out the cleaned job
+      setSuspiciousJobs(prev => prev.filter(job => job.id !== jobId));
+      
+    } catch (err) {
+      console.error("Error cleaning job:", err);
+      toast({
+        title: "❌ Error cleaning job",
+        description: err.message || "Failed to clean job. Please try again.",
         variant: "destructive",
       });
     }
@@ -149,7 +235,7 @@ const AdminPageSimple = () => {
       const userToDelete = users.find(u => u.id === userId);
       const userEmail = userToDelete?.email_addresses?.[0]?.email_address || "Unknown";
       
-      const res = await fetch(`http://localhost:3001/api/delete-user/${userId}`, {
+      const res = await fetch(`http://localhost:3001/api/users/${userId}`, {
         method: "DELETE",
       });
 
@@ -223,8 +309,14 @@ const AdminPageSimple = () => {
   // Load jobs when jobs tab is active and user is authenticated
   useEffect(() => {
     if (activeTab === "jobs" && isLoaded) {
-      console.log("🔍 Fetching jobs for admin...");
       fnJobs();
+    }
+  }, [activeTab, isLoaded]);
+
+  // Load suspicious jobs when suspicious tab is active
+  useEffect(() => {
+    if (activeTab === "suspicious" && isLoaded) {
+      fnSuspiciousJobs();
     }
   }, [activeTab, isLoaded]);
 
@@ -248,6 +340,18 @@ const AdminPageSimple = () => {
     return (
       title.toLowerCase().includes(searchJobs.toLowerCase()) ||
       recruiterEmail.toLowerCase().includes(searchJobs.toLowerCase())
+    );
+  });
+
+  // Filter suspicious jobs by title or recruiter email
+  const filteredSuspiciousJobs = (suspiciousJobs || []).filter((job) => {
+    const title = job.title || "";
+    const recruiterEmail = job.recruiter_email || "";
+    const reason = job.suspicious_reason || "";
+    return (
+      title.toLowerCase().includes(searchSuspicious.toLowerCase()) ||
+      recruiterEmail.toLowerCase().includes(searchSuspicious.toLowerCase()) ||
+      reason.toLowerCase().includes(searchSuspicious.toLowerCase())
     );
   });
 
@@ -306,6 +410,26 @@ const AdminPageSimple = () => {
                   >
                     <Briefcase className="w-5 h-5" />
                     <span className="font-medium">Jobs</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {/* Suspicious Jobs tab navigation */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={activeTab === "suspicious"}
+                    onClick={() => setActiveTab("suspicious")}
+                    className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 ${
+                      activeTab === "suspicious" 
+                        ? "bg-orange-600/20 text-orange-300 border border-orange-400/30 shadow-sm" 
+                        : "text-gray-300 hover:bg-gray-700/20 hover:text-white"
+                    }`}
+                  >
+                    <AlertTriangle className="w-5 h-5" />
+                    <span className="font-medium">Suspicious Jobs</span>
+                    {suspiciousJobs.length > 0 && (
+                      <span className="bg-orange-500 text-white text-xs px-2 py-1 rounded-full ml-auto">
+                        {suspiciousJobs.length}
+                      </span>
+                    )}
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -481,7 +605,7 @@ const AdminPageSimple = () => {
                 </div>
               )}
             </>
-          ) : (
+          ) : activeTab === "jobs" ? (
             <>
               {/* Jobs management section header */}
               <div className="mb-8">
@@ -607,6 +731,163 @@ const AdminPageSimple = () => {
                 </div>
               )}
             </>
+          ) : (
+            <>
+              {/* Suspicious Jobs management section header */}
+              <div className="mb-8">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h1 className="text-3xl font-bold text-white mb-2">Suspicious Jobs</h1>
+                    <p className="text-gray-300">Review and manage flagged job postings</p>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <Button 
+                      onClick={handleAutoDetect}
+                      variant="outline"
+                      className="bg-orange-600 hover:bg-orange-700 text-white border-orange-500"
+                    >
+                      Auto-Detect Suspicious
+                    </Button>
+                    <div className="bg-transparent px-4 py-2 rounded-lg border border-gray-600/30 shadow-sm">
+                      <span className="text-sm text-gray-300">Flagged Jobs: </span>
+                      <span className="font-semibold text-orange-300">{filteredSuspiciousJobs.length}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Suspicious jobs table loading state */}
+              {suspiciousLoading ? (
+                <div className="text-center py-20">
+                  <div className="text-white">Loading suspicious jobs...</div>
+                </div>
+              ) : (
+                <div className="bg-transparent/5 backdrop-blur-sm rounded-xl border border-orange-600/30 shadow-sm">
+                  {/* Suspicious jobs table header with search */}
+                  <div className="p-6 border-b border-orange-600/20 bg-transparent">
+                    <div className="flex items-center justify-between">
+                      <h2 className="text-lg font-semibold text-white">Flagged Jobs</h2>
+                      <Input
+                        placeholder="Search by title, recruiter, or reason..."
+                        className="max-w-sm bg-transparent/10 border-gray-600/30 text-white placeholder:text-gray-400"
+                        value={searchSuspicious}
+                        onChange={(e) => setSearchSuspicious(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Suspicious jobs data table */}
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader className="bg-transparent">
+                        <TableRow>
+                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Title</TableHead>
+                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Recruiter Email</TableHead>
+                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Suspicious Reason</TableHead>
+                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Location</TableHead>
+                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Flagged Date</TableHead>
+                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {/* No suspicious jobs found state */}
+                        {filteredSuspiciousJobs.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="px-6 py-8 text-center text-gray-400">
+                              {searchSuspicious ? "No suspicious jobs found matching your search." : "No suspicious jobs flagged yet. 🎉"}
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          // Suspicious job rows with data and actions
+                          filteredSuspiciousJobs.map((job) => {
+                            const flaggedAt = job.flagged_at
+                              ? new Date(job.flagged_at).toLocaleDateString()
+                              : "-";
+
+                            return (
+                              <TableRow key={job.id} className="border-orange-600/20">
+                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200 font-medium">
+                                  {job.title || "No title"}
+                                </TableCell>
+                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
+                                  {job.recruiter_email || "N/A"}
+                                </TableCell>
+                                <TableCell className="px-6 py-3 text-orange-300 max-w-xs">
+                                  <div className="truncate" title={job.suspicious_reason}>
+                                    {job.suspicious_reason || "Manual review"}
+                                  </div>
+                                </TableCell>
+                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
+                                  {job.location || "Remote"}
+                                </TableCell>
+                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
+                                  {flaggedAt}
+                                </TableCell>
+                                <TableCell className="px-6 py-3 whitespace-nowrap">
+                                  <div className="flex gap-2">
+                                    {/* Clean suspicious job button */}
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <button className="px-3 py-1 rounded text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200">
+                                           Clean
+                                        </button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Clean Suspicious Flag</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to clean the suspicious flag from "{job.title}"? This will remove it from the suspicious jobs list.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleCleanJob(job.id)}
+                                            className="bg-green-600 hover:bg-green-700 text-white"
+                                          >
+                                            Clean Flag
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+
+                                    {/* Delete suspicious job button */}
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <button className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200">
+                                           Delete
+                                        </button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Delete Suspicious Job</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            Are you sure you want to permanently delete "{job.title}"? This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction
+                                            onClick={() => handleDeleteJob(job.id)}
+                                            className="bg-red-600 hover:bg-red-700 text-white"
+                                          >
+                                            Confirm Delete
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -614,4 +895,4 @@ const AdminPageSimple = () => {
   );
 };
 
-export default AdminPageSimple;
+export default AdminPage;

@@ -7,7 +7,7 @@ import { ThemeProvider } from "./components/theme-provider";
 import { Toaster } from "./components/ui/toaster";
 
 // Import all page components
-import AdminPageSimple from "./pages/AdminPageSimple";
+import AdminPage from "./pages/AdminPage";
 import LandingPage from "./pages/landing";
 import Onboarding from "./pages/onboarding";
 import PostJob from "./pages/post-job";
@@ -43,7 +43,7 @@ const router = createBrowserRouter([
         path: "/admin",
         element: (
           <ProtectedRoute requiredRole="admin">
-            <AdminPageSimple />
+            <AdminPage />
           </ProtectedRoute>
         ),
       },
