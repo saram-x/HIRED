@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import {
     Drawer,
     DrawerClose,
@@ -19,10 +18,7 @@ import {
   import { useEffect } from "react";
   import { useToast } from "@/hooks/use-toast";
   
-  /**
-   * COMPANY REGISTRATION FORM VALIDATION SCHEMA
-   * Zod schema for validating new company data
-   */
+  // Validation schema for company registration form
   const schema = z.object({
     name: z.string().min(1, { message: "Company name is required" }),
     logo: z
@@ -37,29 +33,7 @@ import {
       ),
   });
   
-  /**
-   * ADD COMPANY DRAWER COMPONENT
-   * Modal form for registering new companies on HIRED platform
-   * 
-   * FEATURES:
-   * - Modal drawer interface for company registration
-   * - Form validation using Zod schema
-   * - Company name input with validation
-   * - Logo upload (PNG/JPEG only)
-   * - Real-time validation and error display
-   * - Loading states during submission
-   * - Automatic form reset after successful submission
-   * - Integration with companies API
-   * 
-   * USAGE CONTEXT:
-   * - Used in post-job page when company doesn't exist
-   * - Allows recruiters to add their company to platform
-   * - Required step before posting jobs
-   * - Integrates with Supabase for company data storage
-   * - Refreshes company list after successful addition
-   * 
-   * @param {Function} fetchCompanies - Function to refresh companies list after addition
-   */
+  // Modal drawer component for adding new companies to the platform
   const AddCompanyDrawer = ({ fetchCompanies }) => {
     const { toast } = useToast();
     

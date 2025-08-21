@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { Heart, MapPinIcon, Trash2Icon } from "lucide-react";
 import { Button } from "./ui/button";
 import {
@@ -16,16 +15,7 @@ import { useEffect, useState } from "react";
 import { BarLoader } from "react-spinners";
 import { useToast } from "@/hooks/use-toast";
 
-/**
- * JOB CARD COMPONENT
- * Reusable card for displaying job information
- * Supports save/unsave functionality and job deletion for recruiters
- * 
- * @param {Object} job - Job data object
- * @param {boolean} savedInit - Whether job is initially saved
- * @param {Function} onJobAction - Callback after job actions (save/delete)
- * @param {boolean} isMyJob - Whether current user owns this job
- */
+// Reusable job card component with save/delete functionality
 const JobCard = ({
   job,
   savedInit = false,

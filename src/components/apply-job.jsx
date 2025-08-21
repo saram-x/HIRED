@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { Button } from "@/components/ui/button";
 import {
   Drawer,
@@ -21,10 +20,7 @@ import { applyToJob } from "@/api/apiApplication";
 import { BarLoader } from "react-spinners";
 import { useToast } from "@/hooks/use-toast";
 
-/**
- * JOB APPLICATION FORM VALIDATION SCHEMA
- * Zod schema for validating job application form data
- */
+  // Validation schema for job application form
 const schema = z.object({
   experience: z
     .number()
@@ -45,34 +41,7 @@ const schema = z.object({
     ),
 });
 
-/**
- * APPLY JOB DRAWER COMPONENT
- * Interactive drawer component for job applications on HIRED platform
- * 
- * FEATURES:
- * - Modal drawer interface for job applications
- * - Form validation using Zod schema
- * - Experience input (years)
- * - Skills input (comma-separated)
- * - Education level selection (radio buttons)
- * - Resume file upload (PDF/Word only)
- * - Real-time validation and error display
- * - Loading states during submission
- * - Application status tracking
- * - Automatic form reset after successful submission
- * 
- * USAGE CONTEXT:
- * - Displayed on job detail pages for candidates
- * - Triggered by "Apply" button click
- * - Disabled for closed job positions
- * - Shows "Applied" state for already submitted applications
- * - Integrates with Supabase for data persistence
- * 
- * @param {Object} user - Current user object from Clerk authentication
- * @param {Object} job - Job object containing position details
- * @param {Function} fetchJob - Function to refresh job data after application
- * @param {boolean} applied - Whether user has already applied to this job
- */
+// Interactive drawer component for submitting job applications
 export function ApplyJobDrawer({ user, job, fetchJob, applied = false }) {
   const {
     register,

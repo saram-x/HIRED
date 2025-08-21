@@ -1,4 +1,3 @@
-/* eslint-disable react/prop-types */
 import { Boxes, BriefcaseBusiness, Download, School } from "lucide-react";
 import {
   Card,
@@ -18,30 +17,7 @@ import { updateApplicationStatus } from "@/api/apiApplication";
 import useFetch from "@/hooks/use-fetch";
 import { BarLoader } from "react-spinners";
 
-/**
- * APPLICATION CARD COMPONENT
- * Displays individual job application details for HIRED platform
- * 
- * FEATURES:
- * - Candidate information display (name, experience, education)
- * - Skills visualization with tag layout
- * - Resume download functionality
- * - Application status management (for recruiters)
- * - Status dropdown (Applied, Interviewing, Hired, Rejected)
- * - Loading states during status updates
- * - Responsive card design
- * - Role-based functionality (candidate vs recruiter view)
- * 
- * USAGE CONTEXT:
- * - Used in created-applications component for recruiters
- * - Displays applications for specific job postings
- * - Allows recruiters to manage hiring pipeline
- * - Provides candidate overview for quick assessment
- * - Integrates with Supabase for status persistence
- * 
- * @param {Object} application - Application object containing candidate details
- * @param {boolean} isCandidate - Whether viewing as candidate (limited functionality)
- */
+// Displays individual job application details with status management
 const ApplicationCard = ({ application, isCandidate = false }) => {
   const handleDownload = () => {
     const link = document.createElement("a");

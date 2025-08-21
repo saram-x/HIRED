@@ -1,45 +1,15 @@
-/* eslint-disable react/prop-types */
 import { createContext, useContext, useEffect, useState } from "react";
 
-/**
- * THEME PROVIDER INITIAL STATE
- * Default configuration for theme management
- */
+  // Default theme configuration
 const initialState = {
   theme: "system",
   setTheme: () => null,
 };
 
-/**
- * THEME PROVIDER CONTEXT
- * React context for managing application theme state
- */
+  // React context for theme management
 const ThemeProviderContext = createContext(initialState);
 
-/**
- * THEME PROVIDER COMPONENT
- * Provides theme management functionality for HIRED platform
- * 
- * FEATURES:
- * - Light/Dark/System theme support
- * - Automatic system theme detection
- * - Local storage persistence
- * - Dynamic CSS class application
- * - Context-based theme state management
- * - Responsive to system preference changes
- * 
- * USAGE CONTEXT:
- * - Wraps the entire application
- * - Provides theme context to all components
- * - Enables consistent theming across platform
- * - Supports user preference persistence
- * - Integrates with Tailwind CSS dark mode
- * 
- * @param {Object} props - Component props
- * @param {React.ReactNode} props.children - Child components
- * @param {string} props.defaultTheme - Default theme ("light", "dark", "system")
- * @param {string} props.storageKey - localStorage key for theme persistence
- */
+// Theme provider component with light/dark/system mode support
 export function ThemeProvider({
   children,
   defaultTheme = "system",
