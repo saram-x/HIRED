@@ -1,16 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { useUser, useSession } from "@clerk/clerk-react";
-import {
-  AlertDialog,
-  AlertDialogTrigger,
-  AlertDialogContent,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogCancel,
-  AlertDialogAction,
-} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -32,8 +21,13 @@ import {
   SidebarProvider,
   SidebarHeader,
 } from "@/components/ui/sidebar";
-import { Input } from "@/components/ui/input";
 import { Users, Briefcase, Shield, AlertTriangle } from "lucide-react";
+
+// Import reusable admin components
+import TableHeaderComponent from "@/components/admin/table-header";
+import UserRow from "@/components/admin/user-row";
+import JobRow from "@/components/admin/job-row";
+import LoadingSpinner from "@/components/admin/loading-spinner";
 
 const AdminPage = () => {
   // State management for users, jobs, and UI controls
@@ -356,8 +350,131 @@ const AdminPage = () => {
   });
 
   // Show loading or error states
-  if (loading) return <div className="p-6">Loading users...</div>;
+  if (loading) return <LoadingSpinner message="Loading users..." />;
   if (error) return <div className="p-6 text-red-600">{error}</div>;
+
+  // Render main table component based on active tab
+  const renderTableContent = () => {
+    const tableConfig = {
+      users: {
+        title: "All Users",
+        searchPlaceholder: "Search by email or name...",
+        searchValue: searchEmail,
+        onSearchChange: setSearchEmail,
+        data: filteredUsers,
+        totalCount: filteredUsers.length,
+        loading: loading,
+        loadingMessage: "Loading users...",
+        emptyMessage: searchEmail ? "No users found matching your search." : "No users found.",
+        headers: ["Name", "Email", "Username", "Role", "Status", "Last Signed In", "Created", "Actions"],
+        renderRow: (user) => (
+          <UserRow 
+            key={user.id} 
+            user={user} 
+            onBanUser={handleBanUser} 
+            onDeleteUser={handleDeleteUser} 
+          />
+        )
+      },
+      jobs: {
+        title: "All Jobs",
+        searchPlaceholder: "Search by title or recruiter email...",
+        searchValue: searchJobs,
+        onSearchChange: setSearchJobs,
+        data: filteredJobs,
+        totalCount: filteredJobs.length,
+        loading: jobsLoading,
+        loadingMessage: "Loading jobs...",
+        emptyMessage: searchJobs ? "No jobs found matching your search." : "No jobs posted yet.",
+        headers: ["Title", "Recruiter Email", "Location", "Status", "Created", "Actions"],
+        renderRow: (job) => (
+          <JobRow 
+            key={job.id} 
+            job={job} 
+            onDeleteJob={handleDeleteJob} 
+          />
+        )
+      },
+      suspicious: {
+        title: "Flagged Jobs",
+        searchPlaceholder: "Search by title, recruiter, or reason...",
+        searchValue: searchSuspicious,
+        onSearchChange: setSearchSuspicious,
+        data: filteredSuspiciousJobs,
+        totalCount: filteredSuspiciousJobs.length,
+        loading: suspiciousLoading,
+        loadingMessage: "Loading suspicious jobs...",
+        emptyMessage: searchSuspicious ? "No suspicious jobs found matching your search." : "No suspicious jobs flagged yet. 🎉",
+        headers: ["Title", "Recruiter Email", "Suspicious Reason", "Location", "Flagged Date", "Actions"],
+        renderRow: (job) => (
+          <JobRow 
+            key={job.id} 
+            job={job} 
+            onDeleteJob={handleDeleteJob}
+            onCleanJob={handleCleanJob}
+            showSuspiciousReason={true}
+          />
+        ),
+        headerActions: (
+          <Button 
+            onClick={handleAutoDetect}
+            variant="outline"
+            className="bg-orange-600 hover:bg-orange-700 text-white border-orange-500"
+          >
+            Auto-Detect Suspicious
+          </Button>
+        )
+      }
+    };
+
+    const config = tableConfig[activeTab];
+    if (!config) return null;
+
+    return (
+      <div className={`bg-transparent/5 backdrop-blur-sm rounded-xl border ${
+        activeTab === 'suspicious' ? 'border-orange-600/30' : 'border-gray-600/30'
+      } shadow-sm`}>
+        <TableHeaderComponent
+          title={config.title}
+          searchValue={config.searchValue}
+          onSearchChange={config.onSearchChange}
+          searchPlaceholder={config.searchPlaceholder}
+          totalCount={config.totalCount}
+        >
+          {config.headerActions}
+        </TableHeaderComponent>
+
+        {config.loading ? (
+          <LoadingSpinner message={config.loadingMessage} />
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader className="bg-transparent">
+                <TableRow>
+                  {config.headers.map((header) => (
+                    <TableHead key={header} className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">
+                      {header}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {config.data.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={config.headers.length} className="px-6 py-8 text-center text-gray-400">
+                      {config.emptyMessage}
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  config.data.map(config.renderRow)
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <SidebarProvider>
@@ -439,456 +556,40 @@ const AdminPage = () => {
 
         {/* Main content area */}
         <div className="flex-1 p-8">
-          {activeTab === "users" ? (
-            <>
-              {/* User management section header */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">User Management</h1>
-                    <p className="text-gray-300">Manage all users on the platform</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="bg-transparent px-4 py-2 rounded-lg border border-gray-600/30 shadow-sm">
-                      <span className="text-sm text-gray-300">Total Users: </span>
-                      <span className="font-semibold text-white">{filteredUsers.length}</span>
-                    </div>
-                  </div>
+          {/* Section header */}
+          <div className="mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-white mb-2">
+                  {activeTab === 'users' && 'User Management'}
+                  {activeTab === 'jobs' && 'Jobs Management'}
+                  {activeTab === 'suspicious' && 'Suspicious Jobs'}
+                </h1>
+                <p className="text-gray-300">
+                  {activeTab === 'users' && 'Manage all users on the platform'}
+                  {activeTab === 'jobs' && 'Manage all job postings on the platform'}
+                  {activeTab === 'suspicious' && 'Review and manage flagged job postings'}
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="bg-transparent px-4 py-2 rounded-lg border border-gray-600/30 shadow-sm">
+                  <span className="text-sm text-gray-300">
+                    {activeTab === 'users' && 'Total Users: '}
+                    {activeTab === 'jobs' && 'Total Jobs: '}
+                    {activeTab === 'suspicious' && 'Flagged Jobs: '}
+                  </span>
+                  <span className={`font-semibold ${activeTab === 'suspicious' ? 'text-orange-300' : 'text-white'}`}>
+                    {activeTab === 'users' && filteredUsers.length}
+                    {activeTab === 'jobs' && filteredJobs.length}
+                    {activeTab === 'suspicious' && filteredSuspiciousJobs.length}
+                  </span>
                 </div>
               </div>
+            </div>
+          </div>
 
-              {/* User table loading state */}
-              {loading ? (
-                <div className="text-center py-20">
-                  <div className="text-white">Loading users...</div>
-                </div>
-              ) : (
-                <div className="bg-transparent/5 backdrop-blur-sm rounded-xl border border-gray-600/30 shadow-sm">
-                  {/* User table header with search */}
-                  <div className="p-6 border-b border-gray-600/20 bg-transparent">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-white">All Users</h2>
-                      <Input
-                        placeholder="Search by email or name..."
-                        className="max-w-sm bg-transparent/10 border-gray-600/30 text-white placeholder:text-gray-400"
-                        value={searchEmail}
-                        onChange={(e) => setSearchEmail(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Users data table */}
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader className="bg-transparent">
-                        <TableRow>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Name</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Email</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Username</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Role</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Last Signed In</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Created</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {/* No users found state */}
-                        {filteredUsers.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={8} className="px-6 py-8 text-center text-gray-400">
-                              {searchEmail ? "No users found matching your search." : "No users found."}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          // User rows with data and action buttons
-                          filteredUsers.map((user) => {
-                            const name = user.first_name || "No name";
-                            const email = user.email_addresses?.[0]?.email_address || "No email";
-                            const username = user.username || "-";
-                            const role = user.unsafe_metadata?.role || user.public_metadata?.role || "N/A";
-                            const status = user.email_addresses?.[0]?.verification?.status || "Not Verified";
-                            const lastSignIn = user.last_sign_in_at
-                              ? new Date(user.last_sign_in_at).toLocaleDateString()
-                              : "-";
-                            const createdAt = user.created_at
-                              ? new Date(user.created_at).toLocaleDateString()
-                              : "-";
-
-                            return (
-                              <TableRow key={user.id}>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200 font-medium">{name}</TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">{email}</TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">{username}</TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap capitalize text-gray-200">{role}</TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap">
-                                  <span className={`px-2 py-1 rounded-full text-xs ${
-                                    user.banned 
-                                      ? "bg-red-100 text-red-800" 
-                                      : "bg-green-100 text-green-800"
-                                  }`}>
-                                    {user.banned ? "Banned" : "Active"}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">{lastSignIn}</TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">{createdAt}</TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap">
-                                  <div className="flex gap-2">
-                                    {/* Ban/Unban user button with confirmation */}
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <button
-                                          className={`px-3 py-1 rounded text-xs font-medium ${
-                                            user.banned 
-                                              ? "bg-green-100 text-green-700 hover:bg-green-200" 
-                                              : "bg-red-100 text-red-700 hover:bg-red-200"
-                                          }`}
-                                        >
-                                          {user.banned ? "Unban" : "Ban"}
-                                        </button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>
-                                            {user.banned ? "Unban User" : "Ban User"}
-                                          </AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to {user.banned ? "unban" : "ban"} {email}?
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => handleBanUser(user.id, user.banned)}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
-                                          >
-                                            Confirm {user.banned ? "Unban" : "Ban"}
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-
-                                    {/* Delete user button with confirmation */}
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <button className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200">
-                                          Delete
-                                        </button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete User</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to delete {email}? This action cannot be undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => handleDeleteUser(user.id)}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
-                                          >
-                                            Confirm Delete
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : activeTab === "jobs" ? (
-            <>
-              {/* Jobs management section header */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Jobs Management</h1>
-                    <p className="text-gray-300">Manage all job postings on the platform</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="bg-transparent px-4 py-2 rounded-lg border border-gray-600/30 shadow-sm">
-                      <span className="text-sm text-gray-300">Total Jobs: </span>
-                      <span className="font-semibold text-white">{filteredJobs.length}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Jobs table loading state */}
-              {jobsLoading ? (
-                <div className="text-center py-20">
-                  <div className="text-white">Loading jobs...</div>
-                </div>
-              ) : (
-                <div className="bg-transparent/5 backdrop-blur-sm rounded-xl border border-gray-600/30 shadow-sm">
-                  {/* Jobs table header with search */}
-                  <div className="p-6 border-b border-gray-600/20 bg-transparent">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-white">All Jobs</h2>
-                      <Input
-                        placeholder="Search by title or recruiter email..."
-                        className="max-w-sm bg-transparent/10 border-gray-600/30 text-white placeholder:text-gray-400"
-                        value={searchJobs}
-                        onChange={(e) => setSearchJobs(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Jobs data table */}
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader className="bg-transparent">
-                        <TableRow>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Title</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Recruiter Email</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Location</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Status</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Created</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {/* No jobs found state */}
-                        {filteredJobs.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="px-6 py-8 text-center text-gray-400">
-                              {searchJobs ? "No jobs found matching your search." : "No jobs posted yet."}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          // Job rows with data and delete action
-                          filteredJobs.map((job) => {
-                            const createdAt = job.created_at
-                              ? new Date(job.created_at).toLocaleDateString()
-                              : "-";
-
-                            return (
-                              <TableRow key={job.id}>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200 font-medium">
-                                  {job.title || "No title"}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
-                                  {job.recruiter_email || "N/A"}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
-                                  {job.location || "Remote"}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap">
-                                  <span className={`px-2 py-1 rounded-full text-xs ${
-                                    job.isOpen 
-                                      ? "bg-green-100 text-green-800" 
-                                      : "bg-red-100 text-red-800"
-                                  }`}>
-                                    {job.isOpen ? "Open" : "Closed"}
-                                  </span>
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
-                                  {createdAt}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap">
-                                  {/* Delete job button with confirmation */}
-                                  <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                      <button className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200">
-                                        Delete
-                                      </button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                      <AlertDialogHeader>
-                                        <AlertDialogTitle>Delete Job</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                          Are you sure you want to delete "{job.title}"? This action cannot be undone.
-                                        </AlertDialogDescription>
-                                      </AlertDialogHeader>
-                                      <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction
-                                          onClick={() => handleDeleteJob(job.id)}
-                                          className="bg-red-600 hover:bg-red-700 text-white"
-                                        >
-                                          Confirm Delete
-                                        </AlertDialogAction>
-                                      </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                  </AlertDialog>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              {/* Suspicious Jobs management section header */}
-              <div className="mb-8">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Suspicious Jobs</h1>
-                    <p className="text-gray-300">Review and manage flagged job postings</p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <Button 
-                      onClick={handleAutoDetect}
-                      variant="outline"
-                      className="bg-orange-600 hover:bg-orange-700 text-white border-orange-500"
-                    >
-                      Auto-Detect Suspicious
-                    </Button>
-                    <div className="bg-transparent px-4 py-2 rounded-lg border border-gray-600/30 shadow-sm">
-                      <span className="text-sm text-gray-300">Flagged Jobs: </span>
-                      <span className="font-semibold text-orange-300">{filteredSuspiciousJobs.length}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Suspicious jobs table loading state */}
-              {suspiciousLoading ? (
-                <div className="text-center py-20">
-                  <div className="text-white">Loading suspicious jobs...</div>
-                </div>
-              ) : (
-                <div className="bg-transparent/5 backdrop-blur-sm rounded-xl border border-orange-600/30 shadow-sm">
-                  {/* Suspicious jobs table header with search */}
-                  <div className="p-6 border-b border-orange-600/20 bg-transparent">
-                    <div className="flex items-center justify-between">
-                      <h2 className="text-lg font-semibold text-white">Flagged Jobs</h2>
-                      <Input
-                        placeholder="Search by title, recruiter, or reason..."
-                        className="max-w-sm bg-transparent/10 border-gray-600/30 text-white placeholder:text-gray-400"
-                        value={searchSuspicious}
-                        onChange={(e) => setSearchSuspicious(e.target.value)}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Suspicious jobs data table */}
-                  <div className="overflow-x-auto">
-                    <Table>
-                      <TableHeader className="bg-transparent">
-                        <TableRow>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Title</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Recruiter Email</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Suspicious Reason</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Location</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Flagged Date</TableHead>
-                          <TableHead className="px-6 py-4 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {/* No suspicious jobs found state */}
-                        {filteredSuspiciousJobs.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={6} className="px-6 py-8 text-center text-gray-400">
-                              {searchSuspicious ? "No suspicious jobs found matching your search." : "No suspicious jobs flagged yet. 🎉"}
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          // Suspicious job rows with data and actions
-                          filteredSuspiciousJobs.map((job) => {
-                            const flaggedAt = job.flagged_at
-                              ? new Date(job.flagged_at).toLocaleDateString()
-                              : "-";
-
-                            return (
-                              <TableRow key={job.id} className="border-orange-600/20">
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200 font-medium">
-                                  {job.title || "No title"}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
-                                  {job.recruiter_email || "N/A"}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 text-orange-300 max-w-xs">
-                                  <div className="truncate" title={job.suspicious_reason}>
-                                    {job.suspicious_reason || "Manual review"}
-                                  </div>
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
-                                  {job.location || "Remote"}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap text-gray-200">
-                                  {flaggedAt}
-                                </TableCell>
-                                <TableCell className="px-6 py-3 whitespace-nowrap">
-                                  <div className="flex gap-2">
-                                    {/* Clean suspicious job button */}
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <button className="px-3 py-1 rounded text-xs font-medium bg-green-100 text-green-700 hover:bg-green-200">
-                                           Clean
-                                        </button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Clean Suspicious Flag</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to clean the suspicious flag from "{job.title}"? This will remove it from the suspicious jobs list.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => handleCleanJob(job.id)}
-                                            className="bg-green-600 hover:bg-green-700 text-white"
-                                          >
-                                            Clean Flag
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-
-                                    {/* Delete suspicious job button */}
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <button className="px-3 py-1 rounded text-xs font-medium bg-red-100 text-red-700 hover:bg-red-200">
-                                           Delete
-                                        </button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Delete Suspicious Job</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            Are you sure you want to permanently delete "{job.title}"? This action cannot be undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction
-                                            onClick={() => handleDeleteJob(job.id)}
-                                            className="bg-red-600 hover:bg-red-700 text-white"
-                                          >
-                                            Confirm Delete
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                  </div>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+          {/* Render appropriate table */}
+          {renderTableContent()}
         </div>
       </div>
     </SidebarProvider>
