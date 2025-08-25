@@ -19,16 +19,16 @@ const supabaseUrl = process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-// Suspicious patterns for job detection
+// Suspicious patterns for job detection (refined to avoid false positives)
 const SUSPICIOUS_PATTERNS = {
-  highSalary: /(\$|USD|dollars?)\s*([1-9]\d{5,}|\d{1,2},\d{3},\d{3})/i,
-  tooGoodToBeTrue: /(million|millionaire|get rich|easy money|no experience required.*high salary|make.*\$.*fast)/i,
-  promotionalContent: /(buy now|click here|visit our website|promotion|advertisement|marketing|sale|discount)/i,
-  vagueTitles: /^(make money|earn|work from home|opportunity|amazing offer|easy job)$/i,
-  suspiciousCompanies: /(unknown company|n\/a|not specified|\.com|website|test company)/i,
-  multiLevelMarketing: /(mlm|pyramid|network marketing|recruitment|downline|upline|multi level|referral program)/i,
-  crypto: /(bitcoin|crypto|cryptocurrency|blockchain|mining|trading|forex|investment)/i,
-  scamKeywords: /(guaranteed income|no skills needed|work 1 hour|instant money|cash fast|get paid today)/i
+  highSalary: /(\$|USD|dollars?)\s*([1-9]\d{6,}|\d{1,2},\d{3},\d{3})/i, // Increased threshold to $1M+
+  tooGoodToBeTrue: /(million|millionaire|get rich quick|easy money|no experience required.*high salary|make.*\$.*fast|instant wealth|quick cash)/i,
+  promotionalContent: /(buy now|click here|visit our website.*urgent|act fast|limited time offer|special promotion|discount code|sale ending soon)/i,
+  vagueTitles: /^(make money|earn money|work from home|amazing opportunity|easy job|get paid to|mystery shopper)$/i,
+  suspiciousCompanies: /(unknown company|company name: n\/a|not specified|test\.com|fake-company|scam corp)/i,
+  multiLevelMarketing: /(mlm scheme|pyramid scheme|network marketing.*recruitment|recruit others|downline commissions|upline bonuses|multi level marketing|referral program.*unlimited)/i,
+  crypto: /(bitcoin mining|crypto trading|forex trading.*guaranteed|investment scheme|trading bot|cryptocurrency.*guaranteed returns)/i,
+  scamKeywords: /(guaranteed income|no skills needed.*high pay|work 1 hour.*\$|instant money|cash fast.*today|get paid daily|no interview required.*high salary)/i
 };
 
 // Analyze a single job for suspicious patterns
@@ -66,15 +66,16 @@ const analyzeJobForSuspiciousPatterns = (job) => {
     suspiciousReasons.push("Contains common scam keywords");
   }
 
-  // Additional structural checks
-  if (description.length < 50) {
+  // Additional structural checks (refined)
+  if (description.length < 30) {
     suspiciousReasons.push("Job description too short/vague");
   }
-  if (title.length > 100) {
+  if (title.length > 150) {
     suspiciousReasons.push("Unusually long job title");
   }
-  if (description.includes("http") || description.includes("www.")) {
-    suspiciousReasons.push("Contains external links in description");
+  if ((description.includes("http") || description.includes("www.")) && 
+      (description.includes("apply here") || description.includes("click to apply") || description.includes("external site"))) {
+    suspiciousReasons.push("Contains suspicious external links");
   }
 
   return suspiciousReasons;
